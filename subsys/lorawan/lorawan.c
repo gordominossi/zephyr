@@ -45,6 +45,9 @@
 #elif CONFIG_LORAMAC_REGION_RU864
 #define DEFAULT_LORAWAN_REGION             LORAMAC_REGION_RU864
 #define DEFAULT_LORAWAN_CHANNELS_MASK_SIZE LORAWAN_CHANNELS_MASK_SIZE_RU864
+#elif CONFIG_LORAMAC_REGION_LA915
+#define DEFAULT_LORAWAN_REGION             LORAMAC_REGION_LA915
+#define DEFAULT_LORAWAN_CHANNELS_MASK_SIZE LORAWAN_CHANNELS_MASK_SIZE_LA915
 #else
 #error "At least one LoRaWAN region should be selected"
 #endif
@@ -369,6 +372,13 @@ int lorawan_set_region(enum lorawan_region region)
 	case LORAWAN_REGION_RU864:
 		selected_region = LORAMAC_REGION_RU864;
 		region_channels_mask_size = LORAWAN_CHANNELS_MASK_SIZE_RU864;
+		break;
+#endif
+
+#if defined(CONFIG_LORAMAC_REGION_LA915)
+	case LORAWAN_REGION_LA915:
+		selected_region = CONFIG_LORAMAC_REGION_LA915;
+		region_channels_mask_size = LORAWAN_CHANNELS_MASK_SIZE_LA915;
 		break;
 #endif
 

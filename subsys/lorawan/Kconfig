@@ -74,6 +74,9 @@ config LORAMAC_REGION_US915
 config LORAMAC_REGION_RU864
 	bool "Russia 864MHz Frequency band"
 
+config LORAMAC_REGION_LA915
+	bool "Latin America 915MHz Frequency band"
+
 rsource "nvm/Kconfig"
 
 rsource "services/Kconfig"

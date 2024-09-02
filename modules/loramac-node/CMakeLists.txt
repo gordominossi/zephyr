@@ -100,5 +100,8 @@ zephyr_library_sources_ifdef(CONFIG_LORAMAC_REGION_IN865
 zephyr_library_sources_ifdef(CONFIG_LORAMAC_REGION_RU864
   ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/mac/region/RegionRU864.c
 )
+zephyr_library_sources_ifdef(CONFIG_LORAMAC_REGION_LA915
+  ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/mac/region/RegionLA915.c
+)
 
 endif()

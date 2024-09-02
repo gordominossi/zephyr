@@ -55,6 +55,7 @@ enum lorawan_channels_mask_size {
 	LORAWAN_CHANNELS_MASK_SIZE_IN865 = 1, /**< Region IN865 mask size */
 	LORAWAN_CHANNELS_MASK_SIZE_US915 = 6, /**< Region US915 mask size */
 	LORAWAN_CHANNELS_MASK_SIZE_RU864 = 1, /**< Region RU864 mask size */
+	LORAWAN_CHANNELS_MASK_SIZE_LA915 = 6, /**< Region LA915 mask size */
 };
 
 /**
@@ -93,6 +94,7 @@ enum lorawan_region {
 	LORAWAN_REGION_IN865, /**< India 865 MHz frequency band */
 	LORAWAN_REGION_US915, /**< United States 915 MHz frequency band */
 	LORAWAN_REGION_RU864, /**< Russia 864 MHz frequency band */
+	LORAWAN_REGION_LA915, /**< Latin America 915 MHz frequency band */
 };
 
 /**
