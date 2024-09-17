@@ -205,6 +205,8 @@ source "drivers/flash/Kconfig.sam"
 
 source "drivers/flash/Kconfig.simulator"
 
+source "drivers/flash/Kconfig.si32"
+
 source "drivers/flash/Kconfig.rv32m1"
 
 source "drivers/flash/Kconfig.nordic_qspi_nor"
@@ -234,6 +236,8 @@ source "drivers/flash/Kconfig.nrf_rram"
 source "drivers/flash/Kconfig.nrf_mram"
 
 source "drivers/flash/Kconfig.numaker_rmc"
+
+source "drivers/flash/Kconfig.renesas_ra"
 
 module = FLASH
 module-str = flash

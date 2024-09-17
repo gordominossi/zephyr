@@ -69,7 +69,7 @@ typedef struct {
 	uint32_t regIFLS;
 	uint32_t regIER;
 } uart_register_state_t;
-static uart_register_state_t sRegState[2];
+static uart_register_state_t sRegState[AM_REG_UART_NUM_MODULES];
 
 static int uart_ambiq_pm_action(const struct device *dev, enum pm_device_action action)
 {
@@ -186,6 +186,7 @@ static int uart_ambiq_pm_action(const struct device *dev, enum pm_device_action 
 #else
 #define DEVPWRSTATUS_OFFSET 0x4
 #define AMBIQ_UART_DEFINE(n)                                                                       \
+	PM_DEVICE_DT_INST_DEFINE(n, uart_ambiq_pm_action);                                         \
 	static int pwr_on_ambiq_uart_##n(void)                                                     \
 	{                                                                                          \
 		uint32_t addr = DT_REG_ADDR(DT_INST_PHANDLE(n, ambiq_pwrcfg)) +                    \

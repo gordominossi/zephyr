@@ -279,12 +279,18 @@ with a web browser:
 
       $ python3 -m http.server -d _build/html --bind 127.0.0.1
 
+Alternatively, the documentation can be built with the ``make html-live``
+(or ``make html-live-fast``) command, which will build the documentation, host
+it locally, and watch the documentation directory for changes. When changes are
+observed, it will automatically rebuild the documentation and refresh the hosted
+files.
+
 Linking external Doxygen projects against Zephyr
 ************************************************
 
 External projects that build upon Zephyr functionality and wish to refer to
 Zephyr documentation in Doxygen (through the use of @ref), can utilize the
-tag file exported at `zephyr.tag </doxygen/html/zephyr.tag>`_
+tag file exported at `zephyr.tag <../../doxygen/html/zephyr.tag>`_
 
 Once downloaded, the tag file can be used in a custom ``doxyfile.in`` as follows::
 

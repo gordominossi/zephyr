@@ -43,6 +43,10 @@ config WIFI_NM_WPA_SUPPLICANT_WQ_PRIO
 	int "Thread priority of wpa_supplicant iface workqueue"
 	default 7
 
+config WIFI_NM_WPA_SUPPLICANT_PRIO
+	int "Thread priority of wpa_supplicant"
+	default 0
+
 # Currently we default ZVFS_OPEN_MAX to 16 in lib/posix/Kconfig
 # l2_packet - 1
 # ctrl_iface - 2 * socketpairs = 4(local and global)
@@ -105,11 +109,11 @@ config WIFI_NM_WPA_SUPPLICANT_WEP
 
 choice WIFI_NM_WPA_SUPPLICANT_CRYPTO_BACKEND
 	prompt "WPA supplicant crypto implementation"
-	default WIFI_NM_WPA_SUPPLICANT_CRYPTO
+	default WIFI_NM_WPA_SUPPLICANT_CRYPTO_ALT
 	help
 	  Select the crypto implementation to use for WPA supplicant.
-	  WIFI_NM_WPA_SUPPLICANT_CRYPTO_ALT support enterprise
-	  and DPP. And use Mbedtls PSA apis for HW acceleration.
+	  WIFI_NM_WPA_SUPPLICANT_CRYPTO_ALT supports enterprise mode
+	  and DPP.
 
 config WIFI_NM_WPA_SUPPLICANT_CRYPTO
 	bool "Crypto support for WiFi"
@@ -139,8 +143,9 @@ config WIFI_NM_WPA_SUPPLICANT_CRYPTO_ALT
 	select MBEDTLS_CIPHER_MODE_CBC_ENABLED
 	select MBEDTLS_CIPHER_AES_ENABLED
 	select MBEDTLS_CIPHER_DES_ENABLED
+	select MBEDTLS_MD5
 	select MBEDTLS_SHA1
-	select MBEDTLS_ENTROPY_ENABLED
+	select MBEDTLS_ENTROPY_C
 	select MBEDTLS_CIPHER
 	select MBEDTLS_ECP_C
 	select MBEDTLS_ECP_ALL_ENABLED
@@ -156,6 +161,7 @@ config WIFI_NM_WPA_SUPPLICANT_CRYPTO_ALT
 	select MBEDTLS_HKDF_C
 	select MBEDTLS_SERVER_NAME_INDICATION
 	select MBEDTLS_X509_CRL_PARSE_C
+	select MBEDTLS_TLS_VERSION_1_2
 
 config WIFI_NM_WPA_SUPPLICANT_CRYPTO_NONE
 	bool "No Crypto support for WiFi"
@@ -164,7 +170,6 @@ endchoice
 
 config WIFI_NM_WPA_SUPPLICANT_CRYPTO_MBEDTLS_PSA
 	bool "Crypto Platform Secure Architecture support for WiFi"
-	default y if WIFI_NM_WPA_SUPPLICANT_CRYPTO_ALT
 	help
 	  Support Mbedtls 3.x to use PSA apis instead of legacy apis.
 
@@ -179,7 +184,7 @@ config WIFI_NM_WPA_SUPPLICANT_WPA3
 	default y
 
 config WIFI_NM_WPA_SUPPLICANT_AP
-	bool "AP mode support"
+	bool "SoftAP mode support based on WPA supplicant"
 
 config WIFI_NM_WPA_SUPPLICANT_WPS
 	bool "WPS support"
@@ -201,6 +206,10 @@ config WIFI_NM_WPA_SUPPLICANT_CLI
 config WIFI_NM_WPA_SUPPLICANT_INF_MON
 	bool "Monitor the net mgmt event to add/del interface"
 	default y
+
+config WIFI_NM_HOSTAPD_AP
+	bool "FullAP mode support based on Hostapd"
+	depends on !WIFI_NM_WPA_SUPPLICANT_INF_MON
 
 config WIFI_NM_WPA_SUPPLICANT_BSS_MAX_IDLE_TIME
 	int "BSS max idle timeout in seconds"
@@ -437,6 +446,12 @@ config DPP2
 	bool
 
 config DPP3
+	bool
+
+config ACS
+	bool
+
+config IEEE80211AC
 	bool
 
 config NW_SEL_RELIABILITY

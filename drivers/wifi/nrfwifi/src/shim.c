@@ -213,8 +213,9 @@ static void *zep_shim_nbuf_alloc(unsigned int size)
 
 	nbuff = (struct nwb *)k_calloc(sizeof(struct nwb), sizeof(char));
 
-	if (!nbuff)
+	if (!nbuff) {
 		return NULL;
+	}
 
 	nbuff->priv = k_calloc(size, sizeof(char));
 
@@ -811,8 +812,9 @@ static void *zep_shim_timer_alloc(void)
 
 	timer = k_malloc(sizeof(*timer));
 
-	if (!timer)
+	if (!timer) {
 		LOG_ERR("%s: Unable to allocate memory for work", __func__);
+	}
 
 	return timer;
 }
@@ -872,7 +874,7 @@ static unsigned int zep_shim_strlen(const void *str)
 	return strlen(str);
 }
 
-static const struct nrf_wifi_osal_ops nrf_wifi_os_zep_ops = {
+const struct nrf_wifi_osal_ops nrf_wifi_os_zep_ops = {
 	.mem_alloc = zep_shim_mem_alloc,
 	.mem_zalloc = zep_shim_mem_zalloc,
 	.mem_free = k_free,
@@ -962,8 +964,3 @@ static const struct nrf_wifi_osal_ops nrf_wifi_os_zep_ops = {
 	.assert = zep_shim_assert,
 	.strlen = zep_shim_strlen,
 };
-
-const struct nrf_wifi_osal_ops *get_os_ops(void)
-{
-	return &nrf_wifi_os_zep_ops;
-}
