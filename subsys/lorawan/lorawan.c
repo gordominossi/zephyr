@@ -699,7 +699,7 @@ int lorawan_start(void)
 	status = LoRaMacInitialization(&mac_primitives, &mac_callbacks,
 				       selected_region);
 	if (status != LORAMAC_STATUS_OK) {
-		LOG_ERR("LoRaMacInitialization failed: %s",
+		LOG_ERR("LoRaMacInitialization failed: REGION: %d, %s", selected_region,
 			lorawan_status2str(status));
 		return -EINVAL;
 	}
