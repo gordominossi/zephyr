@@ -377,7 +377,7 @@ int lorawan_set_region(enum lorawan_region region)
 
 #if defined(CONFIG_LORAMAC_REGION_LA915)
 	case LORAWAN_REGION_LA915:
-		selected_region = CONFIG_LORAMAC_REGION_LA915;
+		selected_region = LORAMAC_REGION_LA915;
 		region_channels_mask_size = LORAWAN_CHANNELS_MASK_SIZE_LA915;
 		break;
 #endif
