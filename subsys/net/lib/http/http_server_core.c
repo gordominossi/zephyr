@@ -12,6 +12,8 @@
 #include <string.h>
 #include <strings.h>
 
+#include <zephyr/fs/fs.h>
+#include <zephyr/fs/fs_interface.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/net/http/service.h>
@@ -163,8 +165,8 @@ int http_server_init(struct http_server_ctx *ctx)
 		if (IS_ENABLED(CONFIG_NET_IPV4_MAPPING_TO_IPV6)) {
 			int optval = 0;
 
-			(void)setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,
-					 &optval, sizeof(optval));
+			(void)zsock_setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &optval,
+					       sizeof(optval));
 		}
 
 #if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
@@ -290,6 +292,7 @@ static void client_release_resources(struct http_client_ctx *client)
 {
 	struct http_resource_detail *detail;
 	struct http_resource_detail_dynamic *dynamic_detail;
+	struct http_response_ctx response_ctx;
 
 	HTTP_SERVICE_FOREACH(service) {
 		HTTP_SERVICE_FOREACH_RESOURCE(service, resource) {
@@ -315,8 +318,8 @@ static void client_release_resources(struct http_client_ctx *client)
 				continue;
 			}
 
-			dynamic_detail->cb(client, HTTP_SERVER_DATA_ABORTED,
-					   NULL, 0, dynamic_detail->user_data);
+			dynamic_detail->cb(client, HTTP_SERVER_DATA_ABORTED, NULL, 0, &response_ctx,
+					   dynamic_detail->user_data);
 		}
 	}
 }
@@ -757,7 +760,13 @@ void http_server_get_content_type_from_extension(char *url, char *content_type,
 	size_t url_len = strlen(url);
 
 	HTTP_SERVER_CONTENT_TYPE_FOREACH(ct) {
-		char *ext = &url[url_len - ct->extension_len];
+		char *ext;
+
+		if (url_len <= ct->extension_len) {
+			continue;
+		}
+
+		ext = &url[url_len - ct->extension_len];
 
 		if (strncmp(ext, ct->extension, ct->extension_len) == 0) {
 			strncpy(content_type, ct->content_type, content_type_size);
@@ -782,6 +791,29 @@ int http_server_sendall(struct http_client_ctx *client, const void *buf, size_t 
 	}
 
 	return 0;
+}
+
+bool http_response_is_final(struct http_response_ctx *rsp, enum http_data_status status)
+{
+	if (status != HTTP_SERVER_DATA_FINAL) {
+		return false;
+	}
+
+	if (rsp->final_chunk ||
+	    (rsp->status == 0 && rsp->header_count == 0 && rsp->body_len == 0)) {
+		return true;
+	}
+
+	return false;
+}
+
+bool http_response_is_provided(struct http_response_ctx *rsp)
+{
+	if (rsp->status != 0 || rsp->header_count > 0 || rsp->body_len > 0) {
+		return true;
+	}
+
+	return false;
 }
 
 int http_server_start(void)

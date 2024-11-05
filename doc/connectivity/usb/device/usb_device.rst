@@ -27,9 +27,9 @@ over time. It provides the following functionalities:
 
 .. note::
    It is planned to deprecate all APIs listed in :ref:`usb_api` and the
-   functions that depend on them between Zephyr v3.7.0 and v4.0.0, and remove
-   them in v4.2.0. The new USB device support, represented by the APIs in
-   :ref:`usb_device_next_api`, will become the default in Zephyr v4.0.0.
+   functions that depend on them between Zephyr v4.0.0 and v4.1.0, and remove
+   them in v4.3.0. The new USB device support, represented by the APIs in
+   :ref:`usb_device_next_api`, will become the default in Zephyr v4.1.0.
 
 Supported USB classes
 *********************
@@ -565,7 +565,7 @@ The USB Vendor ID for the Zephyr project is ``0x2FE3``.
 This USB Vendor ID must not be used when a vendor
 integrates Zephyr USB device support into its own product.
 
-Each USB :ref:`sample<usb-samples>` has its own unique Product ID.
+Each USB :zephyr:code-sample-category:`sample<usb>` has its own unique Product ID.
 The USB maintainer, if one is assigned, or otherwise the Zephyr Technical
 Steering Committee, may allocate other USB Product IDs based on well-motivated
 and documented requests.

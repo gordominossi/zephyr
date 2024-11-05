@@ -6,9 +6,12 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <zephyr/autoconf.h>
 #include <zephyr/bluetooth/addr.h>
+#include <zephyr/bluetooth/audio/audio.h>
+#include <zephyr/bluetooth/audio/bap.h>
 #include <zephyr/bluetooth/audio/bap_lc3_preset.h>
 #include <zephyr/bluetooth/audio/cap.h>
 #include <zephyr/bluetooth/audio/csip.h>
@@ -20,15 +23,17 @@
 #include <zephyr/bluetooth/gap.h>
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/hci_types.h>
+#include <zephyr/bluetooth/iso.h>
+#include <zephyr/bluetooth/uuid.h>
 #include <zephyr/kernel.h>
 #include <zephyr/net_buf.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/printk.h>
+#include <zephyr/sys/util.h>
 #include <zephyr/sys/util_macro.h>
 
 #include "bstests.h"
 #include "common.h"
-#include "bap_common.h"
 
 #if defined(CONFIG_BT_CAP_COMMANDER)
 
@@ -422,7 +427,7 @@ bap_broadcast_assistant_recv_state_cb(struct bt_conn *conn, int err,
 				      const struct bt_bap_scan_delegator_recv_state *state)
 {
 	char le_addr[BT_ADDR_LE_STR_LEN];
-	char bad_code[BT_AUDIO_BROADCAST_CODE_SIZE * 2 + 1];
+	char bad_code[BT_ISO_BROADCAST_CODE_SIZE * 2 + 1];
 
 	if (err != 0) {
 		FAIL("BASS recv state read failed (%d)\n", err);
@@ -435,7 +440,7 @@ bap_broadcast_assistant_recv_state_cb(struct bt_conn *conn, int err,
 	}
 
 	bt_addr_le_to_str(&state->addr, le_addr, sizeof(le_addr));
-	(void)bin2hex(state->bad_code, BT_AUDIO_BROADCAST_CODE_SIZE, bad_code, sizeof(bad_code));
+	(void)bin2hex(state->bad_code, BT_ISO_BROADCAST_CODE_SIZE, bad_code, sizeof(bad_code));
 	printk("BASS recv state: src_id %u, addr %s, sid %u, sync_state %u, "
 	       "encrypt_state %u%s%s\n",
 	       state->src_id, le_addr, state->adv_sid, state->pa_sync_state, state->encrypt_state,
@@ -978,7 +983,7 @@ static void test_broadcast_reception_stop(size_t acceptor_count)
 
 	/* reception stop is not implemented yet, for now the following command will fail*/
 	reception_stop_param.type = BT_CAP_SET_TYPE_AD_HOC;
-	reception_stop_param.members = NULL;
+	reception_stop_param.param = NULL;
 	reception_stop_param.count = 0U;
 	err = bt_cap_commander_broadcast_reception_stop(&reception_stop_param);
 	if (err != 0) {
