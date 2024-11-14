@@ -73,7 +73,7 @@ class TestRunner:
             os.path.join(TEST_DATA, 'tests', 'dummy', 'agnostic'),
             ['qemu_x86', 'qemu_x86_64'],
             {
-                'passed_configurations': 6,
+                'passed_configurations': 0,
                 'selected_test_instances': 6,
                 'executed_on_platform': 0,
                 'only_built': 6,
@@ -260,7 +260,7 @@ class TestRunner:
 
 
         select_regex = r'^INFO    - (?P<test_scenarios>[0-9]+) test scenarios' \
-                       r' \((?P<test_instances>[0-9]+) test instances\) selected,' \
+                       r' \((?P<test_instances>[0-9]+) configurations\) selected,' \
                        r' (?P<skipped_configurations>[0-9]+) configurations filtered' \
                        r' \((?P<skipped_by_static_filter>[0-9]+) by static filter,' \
                        r' (?P<skipped_at_runtime>[0-9]+) at runtime\)\.$'
@@ -627,7 +627,7 @@ class TestRunner:
             self.loader.exec_module(self.twister_module)
 
         select_regex = r'^INFO    - (?P<test_scenarios>[0-9]+) test scenarios' \
-                       r' \((?P<test_instances>[0-9]+) test instances\) selected,' \
+                       r' \((?P<test_instances>[0-9]+) configurations\) selected,' \
                        r' (?P<skipped_configurations>[0-9]+) configurations filtered' \
                        r' \((?P<skipped_by_static_filter>[0-9]+) by static filter,' \
                        r' (?P<skipped_at_runtime>[0-9]+) at runtime\)\.$'
