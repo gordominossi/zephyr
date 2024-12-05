@@ -64,6 +64,11 @@ Device Drivers and Devicetree
 
     * :c:struct:`adc_driver_api`
 
+ADC
+===
+
+* Renamed the ``compatible`` from ``nxp,kinetis-adc12`` to :dtcompatible:`nxp,adc12`.
+
 Controller Area Network (CAN)
 =============================
 
@@ -107,6 +112,11 @@ Entropy
 
 GNSS
 ====
+
+I2C
+===
+
+* Renamed the ``compatible`` from ``nxp,imx-lpi2c`` to :dtcompatible:`nxp,lpi2c`.
 
 Input
 =====
@@ -158,6 +168,12 @@ Stepper
 
   * Renamed the ``compatible`` from ``zephyr,gpio-steppers`` to :dtcompatible:`zephyr,gpio-stepper`.
   * Renamed the ``stepper_set_actual_position`` function to :c:func:`stepper_set_reference_position`.
+  * Renamed the ``stepper_enable_constant_velocity_mode`` function to :c:func:`stepper_run`.
+
+SPI
+===
+
+* Renamed the ``compatible`` from ``nxp,imx-lpspi`` to :dtcompatible:`nxp,lpspi`.
 
 Regulator
 =========
@@ -172,11 +188,22 @@ Video
   The new ``video-controls.h`` source now contains description of each control ID to help
   disambiguating.
 
+Watchdog
+========
+
+* Renamed the ``compatible`` from ``nxp,kinetis-wdog32`` to :dtcompatible:`nxp,wdog32`.
+
 Bluetooth
 *********
 
 Bluetooth HCI
 =============
+
+* The :kconfig:option:`BT_CTLR` has been deprecated. A new :kconfig:option:`HAS_BT_CTLR` has been
+  introduced which should be selected by the respective link layer Kconfig options (e.g. a
+  HCI driver option, or the one for the upstream controller). It's recommended that all HCI drivers
+  for local link layers select the new option, since that opens up the possibility of indicating
+  build-time support for specific features, which e.g. the host stack can take advantage of.
 
 Bluetooth Mesh
 ==============
@@ -221,6 +248,10 @@ Bluetooth Host
 
    The default value of :kconfig:option:`CONFIG_BT_BUF_ACL_RX_COUNT` has been set to 0.
 
+* LE legacy pairing is no longer enabled by default since it's not secure. Leaving it enabled
+  makes a device vulnerable for downgrade attacks. If an application still needs to use LE legacy
+  pairing, it should disable :kconfig:option:`CONFIG_BT_SMP_SC_PAIR_ONLY` manually.
+
 Bluetooth Crypto
 ================
 
@@ -237,6 +268,12 @@ Networking
   :kconfig:option:`CONFIG_NET_IPV4_DEFAULT_NETMASK` option instead of being left
   empty. Applications can still specify a custom netmask for an address with
   :c:func:`net_if_ipv4_set_netmask_by_addr` function if needed.
+
+* The HTTP server public API function signature for the :c:type:`http_resource_dynamic_cb_t` has
+  changed, the data is now passed in a :c:struct:`http_request_ctx` which holds the data, data
+  length and request header information. Request headers should be accessed via this parameter
+  rather than directly in the :c:struct:`http_client_ctx` to correctly handle concurrent requests
+  on different HTTP/2 streams.
 
 Other Subsystems
 ****************
@@ -268,3 +305,9 @@ Architectures
   * For the native_sim target :kconfig:option:`CONFIG_NATIVE_SIM_NATIVE_POSIX_COMPAT` has been
     switched to ``n`` by default, and this option has been deprecated. Ensure your code does not
     use the :kconfig:option:`CONFIG_BOARD_NATIVE_POSIX` option anymore (:github:`81232`).
+
+* x86
+
+  * Kconfigs ``CONFIG_DISABLE_SSBD`` and ``CONFIG_ENABLE_EXTENDED_IBRS`` have been deprecated
+    since v3.7. These were removed.  Use :kconfig:option:`CONFIG_X86_DISABLE_SSBD` and
+    :kconfig:option:`CONFIG_X86_ENABLE_EXTENDED_IBRS` instead.
