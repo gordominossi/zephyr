@@ -159,6 +159,7 @@ ARM arch:
     - MaureenHelm
     - stephanosio
     - bbolen
+    - wearyzen
   files:
     - arch/arm/
     - arch/arm/core/offsets/
@@ -195,6 +196,8 @@ ARM Platforms:
   status: maintained
   maintainers:
     - ithinuel
+  collaborators:
+    - wearyzen
   files:
     - boards/arm/mps*/
     - boards/arm/v2m_*/
@@ -313,6 +316,7 @@ Bluetooth HCI:
     - sjanc
     - theob-pro
     - HoZHel
+    - cvinayak
   files:
     - include/zephyr/drivers/bluetooth/
     - include/zephyr/drivers/bluetooth.h
@@ -326,7 +330,7 @@ Bluetooth HCI:
   tests:
     - bluetooth
 
-Bluetooth controller:
+Bluetooth Controller:
   status: maintained
   maintainers:
     - cvinayak
@@ -365,6 +369,7 @@ Bluetooth Host:
     - sjanc
     - Thalley
     - theob-pro
+    - cvinayak
   files:
     - doc/connectivity/bluetooth/
     - include/zephyr/bluetooth/
@@ -515,6 +520,7 @@ Bluetooth ISO:
     - jhedberg
     - kruithofa
     - rugeGerritsen
+    - cvinayak
   files:
     - include/zephyr/bluetooth/iso.h
     - doc/connectivity/bluetooth/shell/host/iso.rst
@@ -2220,6 +2226,16 @@ Release Notes:
   labels:
     - "area: Wi-Fi"
 
+"Drivers: Wi-Fi NXP":
+  status: maintained
+  maintainers:
+    - dleach02
+    - MaochenWang1
+  files:
+    - drivers/wifi/nxp/
+  labels:
+    - "platform: NXP Drivers"
+
 "Drivers: Memory Management":
   status: maintained
   maintainers:
@@ -2817,14 +2833,17 @@ Networking:
     - doc/connectivity/networking/api/ieee802154.rst
     - doc/connectivity/networking/api/ptp.rst
     - doc/connectivity/networking/api/wifi.rst
+    - doc/connectivity/networking/api/http*.rst
     - include/zephyr/net/gptp.h
     - include/zephyr/net/ieee802154*.h
     - include/zephyr/net/ptp.h
     - include/zephyr/net/wifi*.h
     - include/zephyr/net/buf.h
     - include/zephyr/net/dhcpv4*.h
+    - include/zephyr/net/http/
     - samples/net/gptp/
     - samples/net/sockets/coap_*/
+    - samples/net/sockets/*http*/
     - samples/net/lwm2m_client/
     - samples/net/wifi/
     - samples/net/dhcpv4_client/
@@ -2833,12 +2852,14 @@ Networking:
     - subsys/net/l2/wifi/
     - subsys/net/lib/coap/
     - subsys/net/lib/config/ieee802154*
+    - subsys/net/lib/http/
     - subsys/net/lib/lwm2m/
     - subsys/net/lib/ptp/
     - subsys/net/lib/tls_credentials/
     - subsys/net/lib/dhcpv4/
     - tests/net/dhcpv4/
     - tests/net/ieee802154/
+    - tests/net/lib/http*/
     - tests/net/wifi/
   labels:
     - "area: Networking"
@@ -3059,6 +3080,23 @@ Networking:
     - "area: Wi-Fi"
   tests:
     - net.wifi
+
+"Networking: HTTP":
+  status: maintained
+  maintainers:
+    - jukkar
+    - rlubos
+  files:
+    - doc/connectivity/networking/api/http*.rst
+    - include/zephyr/net/http/
+    - subsys/net/lib/http/
+    - samples/net/sockets/*http*/
+    - tests/net/lib/http*/
+  labels:
+    - "area: Networking"
+    - "area: HTTP"
+  tests:
+    - net.http
 
 NIOS-2 arch:
   status: maintained
@@ -3667,11 +3705,9 @@ NXP Drivers:
     - dleach02
     - mmahadevan108
   collaborators:
-    - danieldegrasse
     - decsny
     - manuargue
     - dbaluta
-    - MarkWangChinese
   files-regex:
     - ^drivers/.*nxp.*
     - ^drivers/.*mcux.*
@@ -3692,11 +3728,25 @@ NXP Drivers:
     - include/zephyr/drivers/*/*mcux*
     - arch/arm/core/mpu/nxp_mpu.c
     - dts/bindings/*/nxp*
+  files-exclude:
+    - drivers/wifi/nxp/
+    - drivers/usb/*/*mcux*
   files-regex-exclude:
     - .*s32.*
   labels:
     - "platform: NXP Drivers"
   description: NXP Drivers
+
+NXP MCUX USB:
+  status: maintained
+  maintainers:
+    - mmahadevan108
+    - MarkWangChinese
+  files:
+    - drivers/usb/*/*mcux*
+  labels:
+    - "platform: NXP Drivers"
+  description: NXP MCUX USB shim drivers
 
 NXP Platforms (MCU):
   status: maintained
@@ -3704,7 +3754,6 @@ NXP Platforms (MCU):
     - dleach02
     - mmahadevan108
   collaborators:
-    - danieldegrasse
     - DerekSnell
     - yvanderv
     - EmilioCBen
@@ -3766,7 +3815,6 @@ NXP Platforms (MPU):
     - dleach02
     - dbaluta
     - iuliana-prodan
-    - danieldegrasse
     - yvanderv
   files:
     - dts/arm64/nxp/
@@ -3806,7 +3854,8 @@ Microchip MEC Platforms:
     - drivers/*/*mchp*.c
     - tests/boards/mec15xxevb_assy6853/
     - tests/boards/mec172xevb_assy6906/
-    - dts/bindings/*/microchip,*
+    - dts/bindings/*/microchip,mec*
+    - dts/bindings/*/microchip,xec*
   labels:
     - "platform: Microchip MEC"
 
@@ -4768,7 +4817,7 @@ West:
     - dleach02
     - mmahadevan108
   collaborators:
-    - danieldegrasse
+    - decsny
     - manuargue
     - PetervdPerk-NXP
     - bperseghetti
@@ -4996,6 +5045,7 @@ West:
     - ceolin
   collaborators:
     - ithinuel
+    - wearyzen
     - valeriosetti
     - tomi-font
   files:
@@ -5184,6 +5234,7 @@ West:
   collaborators:
     - Vge0rge
     - ithinuel
+    - wearyzen
     - valeriosetti
     - tomi-font
   files:
@@ -5203,6 +5254,7 @@ West:
   collaborators:
     - Vge0rge
     - ithinuel
+    - wearyzen
   files: []
   labels:
     - "area: TF-M"
@@ -5215,6 +5267,7 @@ West:
   collaborators:
     - carlocaione
     - ithinuel
+    - wearyzen
   files:
     - modules/trusted-firmware-a/
   labels:
@@ -5227,6 +5280,7 @@ West:
   collaborators:
     - Vge0rge
     - ithinuel
+    - wearyzen
   files: []
   labels:
     - "area: TF-M"

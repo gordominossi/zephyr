@@ -43,6 +43,12 @@ Deprecated in this release
   the same functionality in their application code by reconnecting to the peer when the
   :c:member:`bt_conn_cb.disconnected` callback is invoked.
 
+* Deprecated TinyCrypt library. The reasons for this are (:github:`43712`):
+
+  * The upstream version of this library is no longer maintained.
+  * Reducing the number of cryptographic libraries in Zephyr to reduce maintenance overhead.
+  * The PSA Crypto API is the recommended cryptographic library for Zephyr.
+
 Architectures
 *************
 
@@ -101,7 +107,6 @@ Boards & SoC Support
 
   * All HWMv1 board name aliases which were added as deprecated in v3.7 are now removed
     (:github:`82247`).
-  * Enabled USB on NXP ``frdm_mcxn236``
 
 * Added support for the following shields:
 
@@ -210,6 +215,11 @@ Drivers and Sensors
 
 * SPI
 
+* Stepper
+
+  * Added driver for ADI TMC2209. :dtcompatible:`adi,tmc2209`
+  * Added :kconfig:option:`CONFIG_STEP_DIR_STEPPER` to enable common functions for step/dir steppers.
+
 * USB
 
 * Video
@@ -254,7 +264,9 @@ Networking
 
 * Network Interface:
 
-* OpenThread
+* OpenThread:
+
+  * Removed the implicit enabling of the :kconfig:option:`CONFIG_NVS` Kconfig option by the :kconfig:option:`CONFIG_NET_L2_OPENTHREAD` symbol.
 
 * PPP
 

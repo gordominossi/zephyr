@@ -651,6 +651,13 @@ class CMake:
             f'-DPython3_EXECUTABLE={pathlib.Path(sys.executable).as_posix()}'
         ]
 
+        if self.instance.testsuite.harness == 'bsim':
+            cmake_args.extend([
+                '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON',
+                '-DCONFIG_ASSERT=y',
+                '-DCONFIG_COVERAGE=y'
+            ])
+
         # If needed, run CMake using the package_helper script first, to only run
         # a subset of all cmake modules. This output will be used to filter
         # testcases, and the full CMake configuration will be run for
@@ -1927,6 +1934,11 @@ class TwisterRunner:
                             pb = ProjectBuilder(instance, self.env, self.jobserver)
                             pb.duts = self.duts
                             pb.process(pipeline, done_queue, task, lock, results)
+                            if self.env.options.quit_on_failure and \
+                                pb.instance.status in [TwisterStatus.FAIL, TwisterStatus.ERROR]:
+                                with pipeline.mutex:
+                                    pipeline.queue.clear()
+                                break
 
                     return True
             else:
@@ -1940,6 +1952,11 @@ class TwisterRunner:
                         pb = ProjectBuilder(instance, self.env, self.jobserver)
                         pb.duts = self.duts
                         pb.process(pipeline, done_queue, task, lock, results)
+                        if self.env.options.quit_on_failure and \
+                            pb.instance.status in [TwisterStatus.FAIL, TwisterStatus.ERROR]:
+                            with pipeline.mutex:
+                                pipeline.queue.clear()
+                            break
                 return True
         except Exception as e:
             logger.error(f"General exception: {e}")

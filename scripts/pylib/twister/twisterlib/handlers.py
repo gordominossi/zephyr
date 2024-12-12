@@ -354,12 +354,9 @@ class BinaryHandler(Handler):
             return
 
         stderr_log = f"{self.instance.build_dir}/handler_stderr.log"
-        with (
-            open(stderr_log, "w+") as stderr_log_fp,
-            subprocess.Popen(
-                command, stdout=subprocess.PIPE, stderr=stderr_log_fp, cwd=self.build_dir, env=env
-            ) as proc,
-        ):
+        with open(stderr_log, "w+") as stderr_log_fp, subprocess.Popen(
+            command, stdout=subprocess.PIPE, stderr=stderr_log_fp, cwd=self.build_dir, env=env
+        ) as proc:
             logger.debug(f"Spawning BinaryHandler Thread for {self.name}")
             t = threading.Thread(target=self._output_handler, args=(proc, harness,), daemon=True)
             t.start()
@@ -566,10 +563,14 @@ class DeviceHandler(Handler):
 
                 board_id = hardware.probe_id or hardware.id
                 product = hardware.product
+                serial_port = hardware.serial
                 if board_id is not None:
                     if runner in ("pyocd", "nrfjprog", "nrfutil"):
                         command_extra_args.append("--dev-id")
                         command_extra_args.append(board_id)
+                    elif runner == "esp32":
+                        command_extra_args.append("--esp-device")
+                        command_extra_args.append(serial_port)
                     elif (
                         runner == "openocd"
                         and product == "STM32 STLink"
@@ -1098,10 +1099,11 @@ class QEMUHandler(Handler):
         is_timeout = False
         qemu_pid = None
 
-        with subprocess.Popen(
+        with open(self.stdout_fn, "w") as stdout_fp, \
+            open(self.stderr_fn, "w") as stderr_fp, subprocess.Popen(
             command,
-            stdout=open(self.stdout_fn, "w"),
-            stderr=open(self.stderr_fn, "w"),
+            stdout=stdout_fp,
+            stderr=stderr_fp,
             cwd=self.build_dir
         ) as proc:
             logger.debug(f"Spawning QEMUHandler Thread for {self.name}")

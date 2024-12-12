@@ -645,6 +645,12 @@ struct hostapd_iface *hostapd_get_interface(const char *ifname)
 	return ctx->hostapd.iface[0];
 }
 
+static void hostapd_event_eapol_rx_cb(void *ctx, const u8 *src_addr,
+				       const u8 *buf, size_t len)
+{
+	hostapd_event_eapol_rx(ctx, src_addr, buf, len, FRAME_ENCRYPTION_UNKNOWN, -1);
+}
+
 static int hostapd_enable_iface_cb(struct hostapd_iface *hapd_iface)
 {
 	struct hostapd_data *bss;
@@ -662,7 +668,7 @@ static int hostapd_enable_iface_cb(struct hostapd_iface *hapd_iface)
 
 	l2_packet_deinit(bss->l2);
 	bss->l2 = l2_packet_init(bss->conf->iface, bss->conf->bssid, ETH_P_EAPOL,
-				 &hostapd_event_eapol_rx, bss, 0);
+				 &hostapd_event_eapol_rx_cb, bss, 0);
 	if (bss->l2 == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to initialize l2 for hostapd interface");
 		return -1;
@@ -710,6 +716,14 @@ static int hostapd_disable_iface_cb(struct hostapd_iface *hapd_iface)
 	supplicant_send_wifi_mgmt_ap_status(hapd_iface,
 					    NET_EVENT_WIFI_CMD_AP_DISABLE_RESULT,
 					    WIFI_STATUS_AP_SUCCESS);
+	hostapd_config_free(hapd_iface->conf);
+	hapd_iface->conf = hapd_iface->interfaces->config_read_cb(hapd_iface->config_fname);
+	for (j = 0; j < hapd_iface->num_bss; j++) {
+		hapd = hapd_iface->bss[j];
+		hapd->iconf = hapd_iface->conf;
+		hapd->conf = hapd_iface->conf->bss[j];
+		hapd->driver = hapd_iface->conf->driver;
+	}
 
 	return 0;
 }

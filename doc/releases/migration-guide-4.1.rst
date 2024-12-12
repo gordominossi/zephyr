@@ -24,6 +24,17 @@ Kernel
 Boards
 ******
 
+Devicetree
+**********
+
+STM32
+=====
+
+* MCO clock source and prescaler are now exclusively configured by the DTS
+  as it was introduced earlier.
+  The Kconfig method for configuration is now removed.
+
+
 Modules
 *******
 
@@ -63,6 +74,9 @@ Device Drivers and Devicetree
   the following driver classes:
 
     * :c:struct:`adc_driver_api`
+
+* The :c:func:`video_buffer_alloc` and :c:func:`video_buffer_aligned_alloc` functions in the
+  video API now take an additional timeout parameter.
 
 ADC
 ===
@@ -127,6 +141,13 @@ Interrupt Controller
 LED Strip
 =========
 
+MMU/MPU
+=======
+
+* Renamed the ``compatible`` from ``nxp,kinetis-mpu`` to :dtcompatible:`nxp,sysmpu` and added
+  its corresponding binding.
+* Renamed the Kconfig option ``CPU_HAS_NXP_MPU`` to :kconfig:option:`CPU_HAS_NXP_SYSMPU`.
+
 Pin Control
 ===========
 
@@ -163,17 +184,22 @@ Sensors
 Serial
 ======
 
+* Renamed the ``compatible`` from ``nxp,kinetis-lpuart`` to :dtcompatible:`nxp,lpuart`.
+
 Stepper
 =======
 
   * Renamed the ``compatible`` from ``zephyr,gpio-steppers`` to :dtcompatible:`zephyr,gpio-stepper`.
   * Renamed the ``stepper_set_actual_position`` function to :c:func:`stepper_set_reference_position`.
   * Renamed the ``stepper_enable_constant_velocity_mode`` function to :c:func:`stepper_run`.
+  * Renamed the ``stepper_move`` function to :c:func:`stepper_move_by`.
+  * Renamed the ``stepper_set_target_position`` function to :c:func:`stepper_move_to`.
 
 SPI
 ===
 
 * Renamed the ``compatible`` from ``nxp,imx-lpspi`` to :dtcompatible:`nxp,lpspi`.
+* Renamed the ``compatible`` from ``nxp,kinetis-dspi`` to :dtcompatible:`nxp,dspi`.
 
 Regulator
 =========
@@ -274,6 +300,10 @@ Networking
   length and request header information. Request headers should be accessed via this parameter
   rather than directly in the :c:struct:`http_client_ctx` to correctly handle concurrent requests
   on different HTTP/2 streams.
+
+* The :kconfig:option:`CONFIG_NET_L2_OPENTHREAD` symbol no longer implies the
+  :kconfig:option:`CONFIG_NVS` Kconfig option. Platforms using OpenThread must explicitly enable
+  either the :kconfig:option:`CONFIG_NVS` or :kconfig:option:`CONFIG_ZMS` Kconfig option.
 
 Other Subsystems
 ****************
