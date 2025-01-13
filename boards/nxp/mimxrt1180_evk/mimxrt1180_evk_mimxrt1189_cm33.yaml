@@ -24,4 +24,7 @@ supported:
   - netif:eth
   - pwm
   - uart
+  - i3c
+  - dma
+  - spi
 vendor: nxp

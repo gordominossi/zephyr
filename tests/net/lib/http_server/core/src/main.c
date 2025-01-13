@@ -27,6 +27,7 @@
 #define TEST_DYNAMIC_POST_PAYLOAD "Test dynamic POST"
 #define TEST_DYNAMIC_GET_PAYLOAD "Test dynamic GET"
 #define TEST_STATIC_PAYLOAD "Hello, World!"
+#define TEST_STATIC_FS_PAYLOAD "Hello, World from static file!"
 
 /* Random base64 encoded data */
 #define TEST_LONG_PAYLOAD_CHUNK_1                                                                  \
@@ -202,6 +203,29 @@ BUILD_ASSERT(sizeof(long_payload) - 1 > CONFIG_HTTP_SERVER_CLIENT_BUFFER_SIZE,
 #define TEST_HTTP2_RST_STREAM_STREAM_1 \
 	0x00, 0x00, 0x04, 0x03, 0x00, 0x00, 0x00, 0x00, TEST_STREAM_ID_1, \
 	0xaa, 0xaa, 0xaa, 0xaa
+#define TEST_HTTP2_HEADERS_PUT_DYNAMIC_STREAM_1 \
+	0x00, 0x00, 0x34, 0x01, 0x04, 0x00, 0x00, 0x00, TEST_STREAM_ID_1, \
+	0x42, 0x03, 0x50, 0x55, 0x54, 0x86, 0x41, 0x87, 0x0b, 0xe2, 0x5c, 0x0b, \
+	0x89, 0x70, 0xff, 0x04, 0x86, 0x62, 0x4f, 0x55, 0x0e, 0x93, 0x13, 0x7a, \
+	0x88, 0x25, 0xb6, 0x50, 0xc3, 0xcb, 0xbc, 0xb8, 0x3f, 0x53, 0x03, 0x2a, \
+	0x2f, 0x2a, 0x5f, 0x87, 0x49, 0x7c, 0xa5, 0x8a, 0xe8, 0x19, 0xaa, 0x0f, \
+	0x0d, 0x02, 0x31, 0x37
+#define TEST_HTTP2_HEADERS_PATCH_DYNAMIC_STREAM_1 \
+	0x00, 0x00, 0x36, 0x01, 0x04, 0x00, 0x00, 0x00, TEST_STREAM_ID_1, \
+	0x42, 0x05, 0x50, 0x41, 0x54, 0x43, 0x48, 0x86, 0x41, 0x87, 0x0b, 0xe2, \
+	0x5c, 0x0b, 0x89, 0x70, 0xff, 0x04, 0x86, 0x62, 0x4f, 0x55, 0x0e, 0x93, \
+	0x13, 0x7a, 0x88, 0x25, 0xb6, 0x50, 0xc3, 0xcb, 0xbc, 0xb8, 0x3f, 0x53, \
+	0x03, 0x2a, 0x2f, 0x2a, 0x5f, 0x87, 0x49, 0x7c, 0xa5, 0x8a, 0xe8, 0x19, \
+	0xaa, 0x0f, 0x0d, 0x02, 0x31, 0x37
+#define TEST_HTTP2_DATA_PUT_DYNAMIC_STREAM_1 TEST_HTTP2_DATA_POST_DYNAMIC_STREAM_1
+#define TEST_HTTP2_DATA_PATCH_DYNAMIC_STREAM_1 TEST_HTTP2_DATA_POST_DYNAMIC_STREAM_1
+#define TEST_HTTP2_HEADERS_DELETE_DYNAMIC_STREAM_1 \
+	0x00, 0x00, 0x32, 0x01, 0x05, 0x00, 0x00, 0x00, TEST_STREAM_ID_1, \
+	0x42, 0x06, 0x44, 0x45, 0x4c, 0x45, 0x54, 0x45, 0x86, 0x41, 0x87, 0x0b, \
+	0xe2, 0x5c, 0x0b, 0x89, 0x70, 0xff, 0x04, 0x86, 0x62, 0x4f, 0x55, 0x0e, \
+	0x93, 0x13, 0x7a, 0x88, 0x25, 0xb6, 0x50, 0xc3, 0xcb, 0xbc, 0xb8, 0x3f, \
+	0x53, 0x03, 0x2a, 0x2f, 0x2a, 0x5f, 0x87, 0x49, 0x7c, 0xa5, 0x8a, 0xe8, \
+	0x19, 0xaa
 
 static uint16_t test_http_service_port = SERVER_PORT;
 HTTP_SERVICE_DEFINE(test_http_service, SERVER_IPV4_ADDR,
@@ -240,7 +264,14 @@ static int dynamic_cb(struct http_client_ctx *client, enum http_data_status stat
 		response_ctx->body_len = dynamic_payload_len;
 		response_ctx->final_chunk = true;
 		break;
+	case HTTP_DELETE:
+		response_ctx->body = NULL;
+		response_ctx->body_len = 0;
+		response_ctx->final_chunk = true;
+		break;
 	case HTTP_POST:
+	case HTTP_PUT:
+	case HTTP_PATCH:
 		if (request_ctx->data_len + offset > sizeof(dynamic_payload)) {
 			return -ENOMEM;
 		}
@@ -268,7 +299,8 @@ struct http_resource_detail_dynamic dynamic_detail = {
 	.common = {
 		.type = HTTP_RESOURCE_TYPE_DYNAMIC,
 		.bitmask_of_supported_http_methods =
-			BIT(HTTP_GET) | BIT(HTTP_POST),
+			BIT(HTTP_GET) | BIT(HTTP_DELETE) | BIT(HTTP_POST) |
+			BIT(HTTP_PUT) | BIT(HTTP_PATCH),
 		.content_type = "text/plain",
 	},
 	.cb = dynamic_cb,
@@ -785,6 +817,7 @@ ZTEST(server_function_tests, test_http1_static_get)
 			  "Received data doesn't match expected response");
 }
 
+/* Common code to verify POST/PUT/PATCH */
 static void common_verify_http2_dynamic_post_request(const uint8_t *request,
 						     size_t request_len)
 {
@@ -822,10 +855,11 @@ ZTEST(server_function_tests, test_http2_dynamic_post)
 						 sizeof(request_post_dynamic));
 }
 
-ZTEST(server_function_tests, test_http1_dynamic_upgrade_post)
+/* Common code to verify POST/PUT/PATCH */
+static void common_verify_http1_dynamic_upgrade_post(const uint8_t *method)
 {
 	static const char http1_request[] =
-		"POST /dynamic HTTP/1.1\r\n"
+		" /dynamic HTTP/1.1\r\n"
 		"Host: 127.0.0.1:8080\r\n"
 		"User-Agent: curl/7.68.0\r\n"
 		"Accept: */*\r\n"
@@ -837,6 +871,9 @@ ZTEST(server_function_tests, test_http1_dynamic_upgrade_post)
 		TEST_DYNAMIC_POST_PAYLOAD;
 	size_t offset = 0;
 	int ret;
+
+	ret = zsock_send(client_fd, method, strlen(method), 0);
+	zassert_not_equal(ret, -1, "send() failed (%d)", errno);
 
 	ret = zsock_send(client_fd, http1_request, strlen(http1_request), 0);
 	zassert_not_equal(ret, -1, "send() failed (%d)", errno);
@@ -857,10 +894,16 @@ ZTEST(server_function_tests, test_http1_dynamic_upgrade_post)
 			  dynamic_payload_len, "Wrong dynamic resource data");
 }
 
-ZTEST(server_function_tests, test_http1_dynamic_post)
+ZTEST(server_function_tests, test_http1_dynamic_upgrade_post)
+{
+	common_verify_http1_dynamic_upgrade_post("POST");
+}
+
+/* Common code to verify POST/PUT/PATCH */
+static void common_verify_http1_dynamic_post(const uint8_t *method)
 {
 	static const char http1_request[] =
-		"POST /dynamic HTTP/1.1\r\n"
+		" /dynamic HTTP/1.1\r\n"
 		"Host: 127.0.0.1:8080\r\n"
 		"User-Agent: curl/7.68.0\r\n"
 		"Accept: */*\r\n"
@@ -875,6 +918,9 @@ ZTEST(server_function_tests, test_http1_dynamic_post)
 	size_t offset = 0;
 	int ret;
 
+	ret = zsock_send(client_fd, method, strlen(method), 0);
+	zassert_not_equal(ret, -1, "send() failed (%d)", errno);
+
 	ret = zsock_send(client_fd, http1_request, strlen(http1_request), 0);
 	zassert_not_equal(ret, -1, "send() failed (%d)", errno);
 
@@ -888,6 +934,11 @@ ZTEST(server_function_tests, test_http1_dynamic_post)
 		      "Wrong dynamic resource length");
 	zassert_mem_equal(dynamic_payload, TEST_DYNAMIC_POST_PAYLOAD,
 			  dynamic_payload_len, "Wrong dynamic resource data");
+}
+
+ZTEST(server_function_tests, test_http1_dynamic_post)
+{
+	common_verify_http1_dynamic_post("POST");
 }
 
 static void common_verify_http2_dynamic_get_request(const uint8_t *request,
@@ -978,6 +1029,134 @@ ZTEST(server_function_tests, test_http1_dynamic_get)
 
 	dynamic_payload_len = strlen(TEST_DYNAMIC_GET_PAYLOAD);
 	memcpy(dynamic_payload, TEST_DYNAMIC_GET_PAYLOAD, dynamic_payload_len);
+
+	ret = zsock_send(client_fd, http1_request, strlen(http1_request), 0);
+	zassert_not_equal(ret, -1, "send() failed (%d)", errno);
+
+	memset(buf, 0, sizeof(buf));
+
+	test_read_data(&offset, sizeof(expected_response) - 1);
+	zassert_mem_equal(buf, expected_response, sizeof(expected_response) - 1,
+			  "Received data doesn't match expected response");
+}
+
+ZTEST(server_function_tests, test_http2_dynamic_put)
+{
+	static const uint8_t request_put_dynamic[] = {
+		TEST_HTTP2_MAGIC,
+		TEST_HTTP2_SETTINGS,
+		TEST_HTTP2_SETTINGS_ACK,
+		TEST_HTTP2_HEADERS_PUT_DYNAMIC_STREAM_1,
+		TEST_HTTP2_DATA_PUT_DYNAMIC_STREAM_1,
+		TEST_HTTP2_GOAWAY,
+	};
+
+	common_verify_http2_dynamic_post_request(request_put_dynamic,
+						 sizeof(request_put_dynamic));
+}
+
+ZTEST(server_function_tests, test_http1_dynamic_upgrade_put)
+{
+	common_verify_http1_dynamic_upgrade_post("PUT");
+}
+
+ZTEST(server_function_tests, test_http1_dynamic_put)
+{
+	common_verify_http1_dynamic_post("PUT");
+}
+
+ZTEST(server_function_tests, test_http2_dynamic_patch)
+{
+	static const uint8_t request_patch_dynamic[] = {
+		TEST_HTTP2_MAGIC,
+		TEST_HTTP2_SETTINGS,
+		TEST_HTTP2_SETTINGS_ACK,
+		TEST_HTTP2_HEADERS_PATCH_DYNAMIC_STREAM_1,
+		TEST_HTTP2_DATA_PATCH_DYNAMIC_STREAM_1,
+		TEST_HTTP2_GOAWAY,
+	};
+
+	common_verify_http2_dynamic_post_request(request_patch_dynamic,
+						 sizeof(request_patch_dynamic));
+}
+
+ZTEST(server_function_tests, test_http1_dynamic_upgrade_patch)
+{
+	common_verify_http1_dynamic_upgrade_post("PATCH");
+}
+
+ZTEST(server_function_tests, test_http1_dynamic_patch)
+{
+	common_verify_http1_dynamic_post("PATCH");
+}
+
+ZTEST(server_function_tests, test_http2_dynamic_delete)
+{
+	static const uint8_t request_delete_dynamic[] = {
+		TEST_HTTP2_MAGIC,
+		TEST_HTTP2_SETTINGS,
+		TEST_HTTP2_SETTINGS_ACK,
+		TEST_HTTP2_HEADERS_DELETE_DYNAMIC_STREAM_1,
+		TEST_HTTP2_GOAWAY,
+	};
+	size_t offset = 0;
+	int ret;
+
+	ret = zsock_send(client_fd, request_delete_dynamic,
+			 sizeof(request_delete_dynamic), 0);
+	zassert_not_equal(ret, -1, "send() failed (%d)", errno);
+
+	memset(buf, 0, sizeof(buf));
+
+	expect_http2_settings_frame(&offset, false);
+	expect_http2_settings_frame(&offset, true);
+	expect_http2_headers_frame(&offset, TEST_STREAM_ID_1,
+				   HTTP2_FLAG_END_HEADERS | HTTP2_FLAG_END_STREAM,
+				   NULL, 0);
+}
+
+ZTEST(server_function_tests, test_http1_dynamic_upgrade_delete)
+{
+	static const char http1_request[] =
+		"DELETE /dynamic HTTP/1.1\r\n"
+		"Host: 127.0.0.1:8080\r\n"
+		"User-Agent: curl/7.68.0\r\n"
+		"Connection: Upgrade, HTTP2-Settings\r\n"
+		"Upgrade: h2c\r\n"
+		"HTTP2-Settings: AAMAAABkAAQAoAAAAAIAAAAA\r\n"
+		"\r\n";
+	size_t offset = 0;
+	int ret;
+
+	ret = zsock_send(client_fd, http1_request, strlen(http1_request), 0);
+	zassert_not_equal(ret, -1, "send() failed (%d)", errno);
+
+	memset(buf, 0, sizeof(buf));
+
+	/* Verify HTTP1 switching protocols response. */
+	expect_http1_switching_protocols(&offset);
+
+	/* Verify HTTP2 frames. */
+	expect_http2_settings_frame(&offset, false);
+	expect_http2_headers_frame(&offset, UPGRADE_STREAM_ID,
+				   HTTP2_FLAG_END_HEADERS | HTTP2_FLAG_END_STREAM,
+				   NULL, 0);
+}
+
+ZTEST(server_function_tests, test_http1_dynamic_delete)
+{
+	static const char http1_request[] =
+		"DELETE /dynamic HTTP/1.1\r\n"
+		"Host: 127.0.0.1:8080\r\n"
+		"User-Agent: curl/7.68.0\r\n"
+		"\r\n";
+	static const char expected_response[] = "HTTP/1.1 200\r\n"
+						"Transfer-Encoding: chunked\r\n"
+						"Content-Type: text/plain\r\n"
+						"\r\n"
+						"0\r\n\r\n";
+	size_t offset = 0;
+	int ret;
 
 	ret = zsock_send(client_fd, http1_request, strlen(http1_request), 0);
 	zassert_not_equal(ret, -1, "send() failed (%d)", errno);
@@ -2106,6 +2285,204 @@ ZTEST(server_function_tests_no_init, test_parse_http_frames)
 	zassert_equal(frame->stream_identifier, 0x01,
 		      "Expected stream_identifier for the 2nd frame doesn't match");
 }
+
+#if DT_HAS_COMPAT_STATUS_OKAY(zephyr_ram_disk)
+
+#include <zephyr/fs/fs.h>
+#include <zephyr/fs/littlefs.h>
+
+FS_LITTLEFS_DECLARE_DEFAULT_CONFIG(storage);
+
+#define TEST_PARTITION		storage_partition
+#define TEST_PARTITION_ID	FIXED_PARTITION_ID(TEST_PARTITION)
+
+#define LFS_MNTP		"/littlefs"
+#define TEST_FILE		"static_file.html"
+#define TEST_DIR		"/files"
+#define TEST_DIR_PATH		LFS_MNTP TEST_DIR
+
+static struct http_resource_detail_static_fs static_file_resource_detail = {
+	.common = {
+			.type = HTTP_RESOURCE_TYPE_STATIC_FS,
+			.bitmask_of_supported_http_methods = BIT(HTTP_GET),
+			.content_type = "text/html",
+		},
+	.fs_path = TEST_DIR_PATH,
+};
+
+HTTP_RESOURCE_DEFINE(static_file_resource, test_http_service, "/static_file.html",
+		     &static_file_resource_detail);
+
+struct fs_mount_t littlefs_mnt = {
+	.type = FS_LITTLEFS,
+	.fs_data = &storage,
+	.storage_dev = (void *)TEST_PARTITION_ID,
+	.mnt_point = LFS_MNTP,
+};
+
+void test_clear_flash(void)
+{
+	int rc;
+	const struct flash_area *fap;
+
+	rc = flash_area_open(TEST_PARTITION_ID, &fap);
+	zassert_equal(rc, 0, "Opening flash area for erase [%d]\n", rc);
+
+	rc = flash_area_flatten(fap, 0, fap->fa_size);
+	zassert_equal(rc, 0, "Erasing flash area [%d]\n", rc);
+}
+
+static int test_mount(void)
+{
+	int ret;
+
+	ret = fs_mount(&littlefs_mnt);
+	if (ret < 0) {
+		TC_PRINT("Error mounting fs [%d]\n", ret);
+		return TC_FAIL;
+	}
+
+	return TC_PASS;
+}
+
+#ifndef PATH_MAX
+#define PATH_MAX 64
+#endif
+
+int check_file_dir_exists(const char *fpath)
+{
+	int res;
+	struct fs_dirent entry;
+
+	res = fs_stat(fpath, &entry);
+
+	return !res;
+}
+
+int test_file_write(struct fs_file_t *filep, const char *test_str)
+{
+	ssize_t brw;
+	int res;
+
+	TC_PRINT("\nWrite tests:\n");
+
+	/* Verify fs_seek() */
+	res = fs_seek(filep, 0, FS_SEEK_SET);
+	if (res) {
+		TC_PRINT("fs_seek failed [%d]\n", res);
+		fs_close(filep);
+		return res;
+	}
+
+	TC_PRINT("Data written:\"%s\"\n\n", test_str);
+
+	/* Verify fs_write() */
+	brw = fs_write(filep, (char *)test_str, strlen(test_str));
+	if (brw < 0) {
+		TC_PRINT("Failed writing to file [%zd]\n", brw);
+		fs_close(filep);
+		return brw;
+	}
+
+	if (brw < strlen(test_str)) {
+		TC_PRINT("Unable to complete write. Volume full.\n");
+		TC_PRINT("Number of bytes written: [%zd]\n", brw);
+		fs_close(filep);
+		return TC_FAIL;
+	}
+
+	TC_PRINT("Data successfully written!\n");
+
+	return res;
+}
+
+int test_mkdir(const char *dir_path, const char *file)
+{
+	int res;
+	struct fs_file_t filep;
+	char file_path[PATH_MAX] = { 0 };
+
+	fs_file_t_init(&filep);
+	res = sprintf(file_path, "%s/%s", dir_path, file);
+	__ASSERT_NO_MSG(res < sizeof(file_path));
+
+	if (check_file_dir_exists(dir_path)) {
+		TC_PRINT("Dir %s exists\n", dir_path);
+		return TC_FAIL;
+	}
+
+	TC_PRINT("Creating new dir %s\n", dir_path);
+
+	/* Verify fs_mkdir() */
+	res = fs_mkdir(dir_path);
+	if (res) {
+		TC_PRINT("Error creating dir[%d]\n", res);
+		return res;
+	}
+
+	res = fs_open(&filep, file_path, FS_O_CREATE | FS_O_RDWR);
+	if (res) {
+		TC_PRINT("Failed opening file [%d]\n", res);
+		return res;
+	}
+
+	TC_PRINT("Testing write to file %s\n", file_path);
+	res = test_file_write(&filep, TEST_STATIC_FS_PAYLOAD);
+	if (res) {
+		fs_close(&filep);
+		return res;
+	}
+
+	res = fs_close(&filep);
+	if (res) {
+		TC_PRINT("Error closing file [%d]\n", res);
+		return res;
+	}
+
+	TC_PRINT("Created dir %s!\n", dir_path);
+
+	return res;
+}
+
+static int setup_fs(void)
+{
+	test_clear_flash();
+
+	zassert_equal(test_mount(), TC_PASS, "Failed to mount fs");
+
+	return test_mkdir(TEST_DIR_PATH, TEST_FILE);
+}
+
+ZTEST(server_function_tests, test_http1_static_fs)
+{
+	static const char http1_request[] =
+		"GET /static_file.html HTTP/1.1\r\n"
+		"Host: 127.0.0.1:8080\r\n"
+		"User-Agent: curl/7.68.0\r\n"
+		"Accept: */*\r\n"
+		"\r\n";
+	static const char expected_response[] =
+		"HTTP/1.1 200 OK\r\n"
+		"Content-Length: 30\r\n"
+		"Content-Type: text/html\r\n"
+		"\r\n"
+		TEST_STATIC_FS_PAYLOAD;
+	size_t offset = 0;
+	int ret;
+
+	ret = setup_fs();
+	zassert_equal(ret, TC_PASS, "Failed to mount fs");
+
+	ret = zsock_send(client_fd, http1_request, strlen(http1_request), 0);
+	zassert_not_equal(ret, -1, "send() failed (%d)", errno);
+
+	memset(buf, 0, sizeof(buf));
+
+	test_read_data(&offset, sizeof(expected_response) - 1);
+	zassert_mem_equal(buf, expected_response, sizeof(expected_response) - 1,
+			  "Received data doesn't match expected response");
+}
+#endif /* DT_HAS_COMPAT_STATUS_OKAY(zephyr_ram_disk) */
 
 static void http_server_tests_before(void *fixture)
 {

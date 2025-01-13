@@ -254,8 +254,8 @@ static int http1_dynamic_response(struct http_client_ctx *client, struct http_re
 	return 0;
 }
 
-static int dynamic_get_req(struct http_resource_detail_dynamic *dynamic_detail,
-			   struct http_client_ctx *client)
+static int dynamic_get_del_req(struct http_resource_detail_dynamic *dynamic_detail,
+			       struct http_client_ctx *client)
 {
 	int ret, len;
 	char *ptr;
@@ -298,8 +298,8 @@ static int dynamic_get_req(struct http_resource_detail_dynamic *dynamic_detail,
 	return 0;
 }
 
-static int dynamic_post_req(struct http_resource_detail_dynamic *dynamic_detail,
-			    struct http_client_ctx *client)
+static int dynamic_post_put_req(struct http_resource_detail_dynamic *dynamic_detail,
+				struct http_client_ctx *client)
 {
 	int ret;
 	char *ptr = client->cursor;
@@ -386,8 +386,9 @@ static int dynamic_post_req(struct http_resource_detail_dynamic *dynamic_detail,
 int handle_http1_static_fs_resource(struct http_resource_detail_static_fs *static_fs_detail,
 				    struct http_client_ctx *client)
 {
-#define RESPONSE_TEMPLATE_STATIC_FS                                                                \
-	"HTTP/1.1 200 OK\r\n"                                                                      \
+#define RESPONSE_TEMPLATE_STATIC_FS				\
+	"HTTP/1.1 200 OK\r\n"					\
+	"Content-Length: %zd\r\n"				\
 	"Content-Type: %s%s\r\n\r\n"
 #define CONTENT_ENCODING_GZIP "\r\nContent-Encoding: gzip"
 
@@ -403,6 +404,7 @@ int handle_http1_static_fs_resource(struct http_resource_detail_static_fs *stati
 	 * for the content type and encoding
 	 */
 	char http_response[sizeof(RESPONSE_TEMPLATE_STATIC_FS) + HTTP_SERVER_MAX_CONTENT_TYPE_LEN +
+			   sizeof("Content-Length: 01234567890123456789\r\n") +
 			   sizeof(CONTENT_ENCODING_GZIP)];
 
 	if (!(static_fs_detail->common.bitmask_of_supported_http_methods & BIT(HTTP_GET))) {
@@ -450,7 +452,7 @@ int handle_http1_static_fs_resource(struct http_resource_detail_static_fs *stati
 
 	/* send HTTP header */
 	len = snprintk(http_response, sizeof(http_response), RESPONSE_TEMPLATE_STATIC_FS,
-		       content_type, gzipped ? CONTENT_ENCODING_GZIP : "");
+		       file_size, content_type, gzipped ? CONTENT_ENCODING_GZIP : "");
 	ret = http_server_sendall(client, http_response, len);
 	if (ret < 0) {
 		goto close;
@@ -526,18 +528,21 @@ static int handle_http1_dynamic_resource(
 		}
 
 	case HTTP_GET:
-		/* For GET request, we do not pass any data to the app but let the app
-		 * send data to the peer.
+	case HTTP_DELETE:
+		/* For GET/DELETE request, we do not pass any data to the app
+		 * but let the app send data to the peer.
 		 */
-		if (user_method & BIT(HTTP_GET)) {
-			return dynamic_get_req(dynamic_detail, client);
+		if (user_method & BIT(client->method)) {
+			return dynamic_get_del_req(dynamic_detail, client);
 		}
 
 		goto not_supported;
 
 	case HTTP_POST:
-		if (user_method & BIT(HTTP_POST)) {
-			return dynamic_post_req(dynamic_detail, client);
+	case HTTP_PUT:
+	case HTTP_PATCH:
+		if (user_method & BIT(client->method)) {
+			return dynamic_post_put_req(dynamic_detail, client);
 		}
 
 		goto not_supported;
@@ -856,12 +861,13 @@ int handle_http1_request(struct http_client_ctx *client)
 
 		if (client->websocket_upgrade) {
 			if (IS_ENABLED(CONFIG_HTTP_SERVER_WEBSOCKET)) {
-				detail = get_resource_detail(client->url_buffer,
+				detail = get_resource_detail(client->service, client->url_buffer,
 							     &path_len, true);
 				if (detail == NULL) {
 					goto not_found;
 				}
 
+				detail->path_len = path_len;
 				client->current_detail = detail;
 				return handle_http1_to_websocket_upgrade(client);
 			}
@@ -896,7 +902,7 @@ upgrade_not_found:
 		}
 	}
 
-	detail = get_resource_detail(client->url_buffer, &path_len, false);
+	detail = get_resource_detail(client->service, client->url_buffer, &path_len, false);
 	if (detail != NULL) {
 		detail->path_len = path_len;
 

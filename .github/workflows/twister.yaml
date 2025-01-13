@@ -50,6 +50,7 @@ jobs:
       PUSH_OPTIONS: ' --clobber-output -M --show-footprint --report-filtered'
       COMMIT_RANGE: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
       BASE_REF: ${{ github.base_ref }}
+      LLVM_TOOLCHAIN_PATH: /usr/lib/llvm-16
     steps:
       - name: Print cloud service information
         run: |
@@ -84,6 +85,7 @@ jobs:
             git config --global user.email "bot@zephyrproject.org"
             git config --global user.name "Zephyr Builder"
             rm -fr ".git/rebase-apply"
+            rm -fr ".git/rebase-merge"
             git rebase origin/${BASE_REF}
             git clean -f -d
             git log  --pretty=oneline | head -n 10
@@ -196,7 +198,7 @@ jobs:
           timestamp="$(date)"
           version="$(git describe --abbrev=12 --always)"
           echo -e "# Generated at $timestamp ($version)\n" > $FREEZE_FILE
-          pip3 freeze | tee -a $FREEZE_FILE
+          pip freeze | tee -a $FREEZE_FILE
 
       - if: matrix.subset == 1 && github.event_name == 'push'
         name: Upload the list of Python packages
@@ -222,7 +224,7 @@ jobs:
 
       - name: Merge Test Results
         run: |
-          pip3 install junitparser junit2html
+          pip install junitparser junit2html
           junitparser merge artifacts/*/*/twister.xml junit.xml
           junit2html junit.xml junit.html
 

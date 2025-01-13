@@ -261,8 +261,7 @@ A Test Suite is a collection of Test Cases which are intended to be used to test
 a software program to ensure it meets certain requirements. The Test Cases in a
 Test Suite are either related or meant to be executed together.
 
-The name of each Test Scenario needs to be unique in the context of the overall
-test application and has to follow basic rules:
+Test Scenario, Test Suite, and Test Case names must follow to these basic rules:
 
 #. The format of the Test Scenario identifier shall be a string without any spaces or
    special characters (allowed characters: alphanumeric and [\_=]) consisting
@@ -272,7 +271,8 @@ test application and has to follow basic rules:
    subsection names delimited with a dot (``.``). For example, a test scenario
    that covers semaphores in the kernel shall start with ``kernel.semaphore``.
 
-#. All Test Scenario identifiers within a ``testcase.yaml`` file need to be unique.
+#. All Test Scenario identifiers within a Test Configuration (``testcase.yaml`` file)
+   need to be unique.
    For example a ``testcase.yaml`` file covering semaphores in the kernel can have:
 
    * ``kernel.semaphore``: For general semaphore tests
@@ -293,6 +293,18 @@ test application and has to follow basic rules:
      a Test Scenario identifier from the corresponding ``testcase.yaml`` (or
      ``sample.yaml``) file where the last section signifies the standalone
      Test Case name, for example: ``debug.coredump.logging_backend``.
+
+
+The ``--no-detailed-test-id`` command line option modifies the above rules in this way:
+
+#. A Test Suite name has only ``<Test Scenario identifier>`` component.
+   Its Application Project path can be found in ``twister.json`` report as ``path:`` property.
+
+#. With short Test Suite names in this mode, all corresponding Test Scenario names
+   must be unique for the Twister execution scope.
+
+#. **Ztest** Test Case names have only Ztest components ``<Ztest suite name>.<Ztest test name>``.
+   Its parent Test Suite name equals to the corresponding Test Scenario identifier.
 
 
 The following is an example test configuration with a few options that are
@@ -478,6 +490,40 @@ integration_platforms: <YML list of platforms/boards>
     platform_allow if the goal is to limit scope due to timing or
     resource constraints.
 
+integration_toolchains: <YML list of toolchain variants>
+    This option expands the scope to all the listed toolchains variants and
+    adds another vector of testing where desired. By default, test
+    configurations are generated based on the toolchain configured in the environment:
+
+    test scenario -> platforms1 -> toolchain1
+    test scenario -> platforms2 -> toolchain1
+
+
+    When a platform supports multiple toolchains that are available during the
+    twister run, it is possible to expand the test configurations to include
+    additional tests for each toolchain. For example, if a platform supports
+    toolchains ``toolchain1`` and ``toolchain2``, and the test scenario
+    includes:
+
+    .. code-block:: yaml
+
+      integration_toolchains:
+        - toolchain1
+        - toolchain2
+
+    the following configurations are generated:
+
+    test scenario -> platforms1 -> toolchain1
+    test scenario -> platforms1 -> toolchain2
+    test scenario -> platforms2 -> toolchain1
+    test scenario -> platforms2 -> toolchain2
+
+
+    .. note::
+
+      This functionality is evaluated always and is not limited to the
+      ``--integration`` option.
+
 platform_exclude: <list of platforms>
     Set of platforms that this test scenario should not run on.
 
@@ -514,6 +560,7 @@ harness: <string>
     - pytest
     - gtest
     - robot
+    - ctest
 
     Harnesses ``ztest``, ``gtest`` and ``console`` are based on parsing of the
     output and matching certain phrases. ``ztest`` and ``gtest`` harnesses look
@@ -678,6 +725,12 @@ harness_config: <harness configuration options>
         The scope for which ``dut`` and ``shell`` pytest fixtures are shared.
         If the scope is set to ``function``, DUT is launched for every test case
         in python script. For ``session`` scope, DUT is launched only once.
+
+    ctest_args: <list of arguments> (default empty)
+        Specify a list of additional arguments to pass to ``ctest`` e.g.:
+        ``ctest_args: [‘--repeat until-pass:5’]``. Note that
+        ``--ctest-args`` can be passed multiple times to pass several arguments
+        to the ctest.
 
     robot_testsuite: <robot file path> (default empty)
         Specify one or more paths to a file containing a Robot Framework test suite to be run.

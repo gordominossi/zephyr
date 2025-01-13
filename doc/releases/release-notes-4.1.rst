@@ -24,6 +24,10 @@ https://docs.zephyrproject.org/latest/security/vulnerabilities.html
 API Changes
 ***********
 
+ * Stream Flash initialization function :c:func:`stream_flash_init` no longer does
+   device size autodetection and instead requires user to explicitly provide size
+   of area available for Stream Flash instance operation.
+
 Removed APIs in this release
 ============================
 
@@ -55,9 +59,9 @@ Architectures
 * Common
 
   * Introduced :kconfig:option:`CONFIG_ARCH_HAS_CUSTOM_CURRENT_IMPL`, which can be selected when
-    an architecture implemented and enabled its own :c:func:`arch_current_thread` and
+    an architecture implements :c:func:`arch_current_thread` and
     :c:func:`arch_current_thread_set` functions for faster retrieval of the current CPU's thread
-    pointer. When enabled, ``_current`` variable will be routed to the
+    pointer. When enabled, the ``_current`` symbol will be routed to
     :c:func:`arch_current_thread` (:github:`80716`).
 
 * ARC
@@ -94,19 +98,33 @@ Bluetooth
 
 * HCI Drivers
 
+* Mesh
+
+  * Introduced a :c:member:`bt_mesh_health_cli::update` callback which is used to update the message
+    published periodically.
+
 Boards & SoC Support
 ********************
 
 * Added support for these SoC series:
 
+  * Added Raspberry Pi RP2350
+
 * Made these changes in other SoC series:
 
 * Added support for these boards:
+
+   * :zephyr:board:`Raspberry Pi Pico 2 <rpi_pico2>`: ``rpi_pico2``
+   * :zephyr:board:`Adafruit QT Py ESP32-S3 <adafruit_qt_py_esp32s3>`: ``adafruit_qt_py_esp32s3``
 
 * Made these board changes:
 
   * All HWMv1 board name aliases which were added as deprecated in v3.7 are now removed
     (:github:`82247`).
+  * ``mimxrt1050_evk`` and ``mimxrt1060_evk`` revisions for ``qspi`` and ``hyperflash`` have been
+    converted into variants. ``mimxrt1060_evkb`` has been converted into revision ``B`` of
+    ``mimxrt1060_evk``.
+  * Enabled USB, RTC on NXP ``frdm_mcxn236``
 
 * Added support for the following shields:
 
@@ -117,6 +135,17 @@ Build system and Infrastructure
   files. This feature was deprecated a long time ago. Projects that do still use
   them can use the :zephyr_file:`scripts/utils/twister_to_list.py` script to
   automatically migrate Twister configuration files.
+
+* Twister
+
+  * Test Case names for Ztest now include Ztest suite name, so the resulting identifier has
+    three sections and looks like: ``<test_scenario_name>.<ztest_suite_name>.<ztest_name>``.
+    These extended identifiers are used in log output, twister.json and testplan.json,
+    as well as for ``--sub-test`` command line parameters (:github:`80088`).
+  * The ``--no-detailed-test-id`` command line option also shortens Ztest Test Case names excluding
+    its Test Scenario name prefix which is the same as the parent Test Suite id (:github:`82302`).
+    Twister XML reports have full testsuite name as ``testcase.classname property`` resolving
+    possible duplicate testcase elements in ``twister_report.xml`` testsuite container.
 
 Drivers and Sensors
 *******************
@@ -149,6 +178,8 @@ Drivers and Sensors
 * Ethernet
 
 * Flash
+
+  * NXP MCUX FlexSPI: Add support for 4-byte addressing mode of Micron MT25Q flash family (:github:`82532`)
 
 * FPGA
 
@@ -217,7 +248,8 @@ Drivers and Sensors
 
 * Stepper
 
-  * Added driver for ADI TMC2209. :dtcompatible:`adi,tmc2209`
+  * Added driver for ADI TMC2209. :dtcompatible:`adi,tmc2209`.
+  * Added driver for TI DRV8424. :dtcompatible:`ti,drv8424`.
   * Added :kconfig:option:`CONFIG_STEP_DIR_STEPPER` to enable common functions for step/dir steppers.
 
 * USB
@@ -228,6 +260,9 @@ Drivers and Sensors
     those present in the Linux kernel.
 
 * Watchdog
+
+  * Added :kconfig:option:`CONFIG_HAS_WDT_NO_CALLBACKS` which drivers select when they do not support
+    a callback being provided in :c:struct:`wdt_timeout_cfg`.
 
 * Wi-Fi
 
@@ -289,6 +324,8 @@ Networking
 
 * Wi-Fi:
 
+  * hostap: Removed the unused default Crypto module :kconfig:option:`CONFIG_WIFI_NM_WPA_SUPPLICANT_CRYPTO` Kconfig option.
+
 * zperf:
 
 USB
@@ -344,6 +381,10 @@ Libraries / Subsystems
 * State Machine Framework
 
 * Storage
+
+  * Shell: :kconfig:option:`CONFIG_FILE_SYSTEM_SHELL_MOUNT_COMMAND` was added,
+    allowing the mount subcommand to be optionally disabled. This can reduce
+    flash and RAM usage since it requires the heap to be present.
 
 * Task Watchdog
 
