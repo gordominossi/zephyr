@@ -67,15 +67,14 @@ LOG_MODULE_REGISTER(usb_dc_stm32);
 
 static const struct stm32_pclken pclken[] = STM32_DT_INST_CLOCKS(0);
 
-#if DT_INST_NODE_HAS_PROP(0, maximum_speed)
-#define USB_MAXIMUM_SPEED	DT_INST_PROP(0, maximum_speed)
-#endif
-
 PINCTRL_DT_INST_DEFINE(0);
 static const struct pinctrl_dev_config *usb_pcfg =
 					PINCTRL_DT_INST_DEV_CONFIG_GET(0);
 
-#define USB_OTG_HS_EMB_PHY (DT_HAS_COMPAT_STATUS_OKAY(st_stm32_usbphyc) && \
+#define USB_OTG_HS_EMB_PHYC (DT_HAS_COMPAT_STATUS_OKAY(st_stm32_usbphyc) && \
+			     DT_HAS_COMPAT_STATUS_OKAY(st_stm32_otghs))
+
+#define USB_OTG_HS_EMB_PHY (DT_HAS_COMPAT_STATUS_OKAY(st_stm32u5_otghs_phy) && \
 			    DT_HAS_COMPAT_STATUS_OKAY(st_stm32_otghs))
 
 #define USB_OTG_HS_ULPI_PHY (DT_HAS_COMPAT_STATUS_OKAY(usb_ulpi_phy) && \
@@ -86,6 +85,22 @@ static const struct gpio_dt_spec ulpi_reset =
 	GPIO_DT_SPEC_GET_OR(DT_PHANDLE(DT_INST(0, st_stm32_otghs), phys), reset_gpios, {0});
 #endif
 
+/**
+ * The following defines are used to map the value of the "maxiumum-speed"
+ * DT property to the corresponding definition used by the STM32 HAL.
+ */
+#if defined(CONFIG_SOC_SERIES_STM32H7X) || defined(USB_OTG_HS_EMB_PHYC) || \
+	defined(USB_OTG_HS_EMB_PHY)
+#define USB_DC_STM32_HIGH_SPEED             USB_OTG_SPEED_HIGH_IN_FULL
+#else
+#define USB_DC_STM32_HIGH_SPEED             USB_OTG_SPEED_HIGH
+#endif
+
+#if DT_HAS_COMPAT_STATUS_OKAY(st_stm32_usb)
+#define USB_DC_STM32_FULL_SPEED             PCD_SPEED_FULL
+#else
+#define USB_DC_STM32_FULL_SPEED             USB_OTG_SPEED_FULL
+#endif
 /*
  * USB, USB_OTG_FS and USB_DRD_FS are defined in STM32Cube HAL and allows to
  * distinguish between two kind of USB DC. STM32 F0, F3, L0 and G4 series
@@ -406,7 +421,7 @@ static int usb_dc_stm32_clock_enable(void)
 	LL_AHB1_GRP1_DisableClockLowPower(LL_AHB1_GRP1_PERIPH_OTGHSULPI);
 #endif
 
-#if USB_OTG_HS_EMB_PHY
+#if USB_OTG_HS_EMB_PHYC
 	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_OTGPHYC);
 #endif
 #endif /* USB_OTG_HS_ULPI_PHY */
@@ -429,45 +444,14 @@ static int usb_dc_stm32_clock_disable(void)
 	return 0;
 }
 
-#if defined(USB_OTG_FS) || defined(USB_OTG_HS)
-static uint32_t usb_dc_stm32_get_maximum_speed(void)
-{
-	/*
-	 * If max-speed is not passed via DT, set it to USB controller's
-	 * maximum hardware capability.
-	 */
-#if USB_OTG_HS_EMB_PHY || USB_OTG_HS_ULPI_PHY
-	uint32_t speed = USB_OTG_SPEED_HIGH;
-#else
-	uint32_t speed = USB_OTG_SPEED_FULL;
-#endif
-
-#ifdef USB_MAXIMUM_SPEED
-
-	if (!strncmp(USB_MAXIMUM_SPEED, "high-speed", 10)) {
-		speed = USB_OTG_SPEED_HIGH;
-	} else if (!strncmp(USB_MAXIMUM_SPEED, "full-speed", 10)) {
-#if defined(CONFIG_SOC_SERIES_STM32H7X) || defined(USB_OTG_HS_EMB_PHY)
-		speed = USB_OTG_SPEED_HIGH_IN_FULL;
-#else
-		speed = USB_OTG_SPEED_FULL;
-#endif
-	} else {
-		LOG_DBG("Unsupported maximum speed defined in device tree. "
-			"USB controller will default to its maximum HW "
-			"capability");
-	}
-#endif
-
-	return speed;
-}
-#endif /* USB_OTG_FS || USB_OTG_HS */
-
 static int usb_dc_stm32_init(void)
 {
 	HAL_StatusTypeDef status;
 	int ret;
 	unsigned int i;
+
+	usb_dc_stm32_state.pcd.Init.speed =
+			UTIL_CAT(USB_DC_STM32_, DT_INST_STRING_UPPER_TOKEN(0, maximum_speed));
 
 #if defined(USB) || defined(USB_DRD_FS)
 #ifdef USB
@@ -475,7 +459,6 @@ static int usb_dc_stm32_init(void)
 #else
 	usb_dc_stm32_state.pcd.Instance = USB_DRD_FS;
 #endif
-	usb_dc_stm32_state.pcd.Init.speed = PCD_SPEED_FULL;
 	usb_dc_stm32_state.pcd.Init.dev_endpoints = USB_NUM_BIDIR_ENDPOINTS;
 	usb_dc_stm32_state.pcd.Init.phy_itface = PCD_PHY_EMBEDDED;
 	usb_dc_stm32_state.pcd.Init.ep0_mps = PCD_EP0MPS_64;
@@ -487,8 +470,7 @@ static int usb_dc_stm32_init(void)
 	usb_dc_stm32_state.pcd.Instance = USB_OTG_FS;
 #endif
 	usb_dc_stm32_state.pcd.Init.dev_endpoints = USB_NUM_BIDIR_ENDPOINTS;
-	usb_dc_stm32_state.pcd.Init.speed = usb_dc_stm32_get_maximum_speed();
-#if USB_OTG_HS_EMB_PHY
+#if USB_OTG_HS_EMB_PHYC || USB_OTG_HS_EMB_PHY
 	usb_dc_stm32_state.pcd.Init.phy_itface = USB_OTG_HS_EMBEDDED_PHY;
 #elif USB_OTG_HS_ULPI_PHY
 	usb_dc_stm32_state.pcd.Init.phy_itface = USB_OTG_ULPI_PHY;
@@ -1275,6 +1257,19 @@ void HAL_PCD_DataInStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum)
 	if (ep_state->cb) {
 		ep_state->cb(ep, USB_DC_EP_DATA_IN);
 	}
+}
+
+void HAL_PCD_ISOINIncompleteCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum)
+{
+	uint8_t ep_idx = USB_EP_GET_IDX(epnum);
+	uint8_t ep = ep_idx | USB_EP_DIR_IN;
+	struct usb_dc_stm32_ep_state *ep_state = usb_dc_stm32_get_ep_state(ep);
+
+	LOG_DBG("epnum 0x%02x", epnum);
+
+	__ASSERT(ep_state, "No corresponding ep_state for ep");
+
+	k_sem_give(&ep_state->write_sem);
 }
 
 #if (defined(USB) || defined(USB_DRD_FS)) && DT_INST_NODE_HAS_PROP(0, disconnect_gpios)
